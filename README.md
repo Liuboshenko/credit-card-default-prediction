@@ -61,7 +61,7 @@ credit-card-default-prediction/
 ### Шаг 1. Клонировать / перейти в проект
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Liuboshenko/credit-card-default-prediction.git
 cd credit-card-default-prediction
 ```
 
@@ -70,7 +70,6 @@ cd credit-card-default-prediction
 ```bash
 python3.11 -m venv venv3.11
 source venv3.11/bin/activate          # Linux / macOS
-# venv3.11\Scripts\activate           # Windows
 ```
 
 ### Шаг 3. Установить зависимости
