@@ -52,6 +52,8 @@ fa1aec823035: Mounted from library/python
 6d7c150df58d: Mounted from library/python 
 latest_v1: digest: sha256:dd90e5ac32de271a32f84dceef2c7e53b3697e9f6123a540b7a6a248511be6c3 size: 3037
 ```
+## Проверим что образ отображается в UI удаленного репоизтория
+![скрин рабочего приложения](images_screenshots/docker_public_hub.png)
 
 ## Для демонстрации убедимся что локально нет образов в хранилище
 ```bash

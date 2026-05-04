@@ -1,0 +1,30 @@
+(venv3.11) sovereign@sovereign-pc:~/Documents/НИЯУ_МИФИ/INTEGRATION/git/credit-card-default-prediction$ pytest tests/ -v
+============================================================================================= test session starts ==============================================================================================
+platform linux -- Python 3.11.9, pytest-8.3.5, pluggy-1.6.0 -- /home/sovereign/Documents/НИЯУ_МИФИ/INTEGRATION/git/credit-card-default-prediction/venv3.11/bin/python3.11
+cachedir: .pytest_cache
+rootdir: /home/sovereign/Documents/НИЯУ_МИФИ/INTEGRATION/git/credit-card-default-prediction
+collected 20 items                                                                                                                                                                                             
+
+tests/test_api.py::TestHealth::test_status_200 PASSED                                                                                                                                                    [  5%]
+tests/test_api.py::TestHealth::test_body_structure PASSED                                                                                                                                                [ 10%]
+tests/test_api.py::TestPredictV1::test_valid_request PASSED                                                                                                                                              [ 15%]
+tests/test_api.py::TestPredictV1::test_response_fields PASSED                                                                                                                                            [ 20%]
+tests/test_api.py::TestPredictV1::test_prediction_is_binary PASSED                                                                                                                                       [ 25%]
+tests/test_api.py::TestPredictV1::test_probability_in_range PASSED                                                                                                                                       [ 30%]
+tests/test_api.py::TestPredictV1::test_default_matches_prediction PASSED                                                                                                                                 [ 35%]
+tests/test_api.py::TestPredictV1::test_missing_feature_returns_400 PASSED                                                                                                                                [ 40%]
+tests/test_api.py::TestPredictV1::test_non_json_returns_400 PASSED                                                                                                                                       [ 45%]
+tests/test_api.py::TestPredictV1::test_empty_body_returns_400 PASSED                                                                                                                                     [ 50%]
+tests/test_api.py::TestPredictV2::test_valid_request PASSED                                                                                                                                              [ 55%]
+tests/test_api.py::TestPredictV2::test_model_version_v2 PASSED                                                                                                                                           [ 60%]
+tests/test_api.py::TestPredictV2::test_unknown_version_returns_400 PASSED                                                                                                                                [ 65%]
+tests/test_api.py::TestABPredict::test_valid_request PASSED                                                                                                                                              [ 70%]
+tests/test_api.py::TestABPredict::test_ab_group_present PASSED                                                                                                                                           [ 75%]
+tests/test_api.py::TestABPredict::test_ab_group_equals_model_version PASSED                                                                                                                              [ 80%]
+tests/test_api.py::TestABPredict::test_both_versions_appear_over_many_requests PASSED                                                                                                                    [ 85%]
+tests/test_api.py::TestABStats::test_status_200 PASSED                                                                                                                                                   [ 90%]
+tests/test_api.py::TestABStats::test_stats_structure PASSED                                                                                                                                              [ 95%]
+tests/test_api.py::TestABStats::test_stats_fields PASSED                                                                                                                                                 [100%]
+
+============================================================================================== 20 passed in 1.67s ==============================================================================================
+(venv3.11) sovereign@sovereign-pc:~/Documents/НИЯУ_МИФИ/INTEGRATION/git/credit-card-default-prediction$ 

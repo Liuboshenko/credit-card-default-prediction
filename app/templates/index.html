@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Credit Card Default · ML Service</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface2: #252840;
+    --border: #2e3150;
+    --accent: #6c63ff;
+    --accent2: #00d4aa;
+    --danger: #ff4d6d;
+    --success: #00d4aa;
+    --warning: #ffb347;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* ── Header ──────────────────────────────────────────────────── */
+  header {
+    background: linear-gradient(135deg, #1a1d2e 0%, #252840 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-icon { font-size: 2rem; }
+  .logo h1 { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+  .logo p  { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+  #health-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 8px 16px; border-radius: 99px; font-size: .85rem; cursor: pointer;
+    transition: border-color .2s;
+  }
+  #health-badge:hover { border-color: var(--accent2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; transition: background .3s; }
+  .dot.ok  { background: var(--success); box-shadow: 0 0 8px var(--success); }
+  .dot.err { background: var(--danger);  box-shadow: 0 0 8px var(--danger); }
+
+  /* ── Main layout ─────────────────────────────────────────────── */
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+  .section-title {
+    font-size: .75rem; font-weight: 600; letter-spacing: .1em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 16px;
+  }
+
+  /* ── Cards ───────────────────────────────────────────────────── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 40px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 24px;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: border-color .2s, transform .15s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card-header { display: flex; align-items: center; gap: 10px; }
+  .method {
+    font-size: .7rem; font-weight: 700; padding: 3px 8px;
+    border-radius: 6px; letter-spacing: .05em;
+  }
+  .get  { background: #1a3a2a; color: var(--success); }
+  .post { background: #2a1a3a; color: #b39ddb; }
+  .endpoint { font-family: monospace; font-size: .95rem; color: var(--text); }
+  .card p { font-size: .85rem; color: var(--muted); line-height: 1.5; }
+  .btn {
+    margin-top: auto; padding: 10px 20px; border: none; border-radius: 8px;
+    font-size: .875rem; font-weight: 600; cursor: pointer; transition: opacity .15s, transform .1s;
+  }
+  .btn:hover { opacity: .88; transform: scale(1.02); }
+  .btn:active { transform: scale(.98); }
+  .btn-primary  { background: var(--accent);  color: #fff; }
+  .btn-success  { background: var(--success); color: #0f1117; }
+  .btn-warning  { background: var(--warning); color: #0f1117; }
+  .btn-info     { background: #3a8bcd;        color: #fff; }
+  .btn-outline  { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent2); }
+  .btn-sm { padding: 6px 14px; font-size: .8rem; }
+  .btn-danger { background: var(--danger); color: #fff; }
+
+  /* ── Stats bar ───────────────────────────────────────────────── */
+  .stats-bar {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 40px;
+  }
+  .stat-item { text-align: center; }
+  .stat-val  { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+  .stat-lbl  { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+  /* ── Modal overlay ───────────────────────────────────────────── */
+  .overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+    z-index: 100; justify-content: center; align-items: flex-start;
+    padding: 40px 16px; overflow-y: auto;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; width: 100%; max-width: 720px;
+    box-shadow: var(--shadow); animation: slideIn .2s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+  .modal-header {
+    padding: 22px 28px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .modal-body  { padding: 24px 28px; }
+  .modal-footer { padding: 16px 28px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .close-btn { background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+  .close-btn:hover { color: var(--text); }
+
+  /* ── Form ────────────────────────────────────────────────────── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: .78rem; font-weight: 600; color: var(--muted); }
+  label span { font-weight: 400; color: #5a6170; margin-left: 4px; }
+  input[type=number], input[type=text] {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 9px 12px;
+    font-size: .875rem; outline: none; transition: border-color .2s;
+    width: 100%;
+  }
+  input::placeholder { color: #4a5268; }
+  input:focus { border-color: var(--accent); }
+  input.filled { border-color: var(--accent2); }
+
+  /* ── Result box ──────────────────────────────────────────────── */
+  .result-box {
+    display: none; margin-top: 20px;
+    border-radius: 10px; padding: 18px 20px;
+    border: 1px solid var(--border);
+  }
+  .result-box.show { display: block; animation: fadeIn .3s ease; }
+  .result-box.ok   { background: #0d2e20; border-color: #1a6e40; }
+  .result-box.bad  { background: #2e0d14; border-color: #6e1a2a; }
+  .result-box.neutral { background: var(--surface2); }
+  @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+  .result-verdict { font-size: 1.2rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .result-item { display: flex; flex-direction: column; gap: 2px; }
+  .result-item .r-lbl { font-size: .72rem; color: var(--muted); }
+  .result-item .r-val { font-size: 1rem; font-weight: 600; }
+  .prob-bar-wrap { margin-top: 12px; }
+  .prob-bar-bg { background: var(--surface2); border-radius: 99px; height: 8px; overflow: hidden; }
+  .prob-bar-fill { height: 100%; border-radius: 99px; transition: width .6s ease; }
+
+  /* ── AB stats table ──────────────────────────────────────────── */
+  .ab-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .ab-table th, .ab-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: .875rem; }
+  .ab-table th { color: var(--muted); font-weight: 600; font-size: .75rem; text-transform: uppercase; }
+  .ab-table td:first-child { font-family: monospace; font-weight: 700; color: var(--accent); }
+  .bar-cell { display: flex; align-items: center; gap: 8px; }
+  .mini-bar { flex: 1; background: var(--surface2); border-radius: 99px; height: 6px; overflow: hidden; }
+  .mini-bar-fill { height: 100%; border-radius: 99px; background: var(--accent2); }
+
+  /* ── Health modal ────────────────────────────────────────────── */
+  .health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .health-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .health-item .h-lbl { font-size: .75rem; color: var(--muted); margin-bottom: 4px; }
+  .health-item .h-val { font-size: .95rem; font-weight: 600; }
+
+  /* ── Hint box ────────────────────────────────────────────────── */
+  .hint { background: #1a2035; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; font-size: .8rem; color: var(--muted); line-height: 1.6; }
+  .hint b { color: var(--text); }
+
+  /* ── Loading spinner ─────────────────────────────────────────── */
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Version selector tabs ───────────────────────────────────── */
+  .tabs { display: flex; gap: 6px; margin-bottom: 18px; background: var(--surface2); padding: 4px; border-radius: 10px; }
+  .tab { flex: 1; padding: 8px; text-align: center; border-radius: 7px; cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--muted); transition: .2s; border: none; background: none; }
+  .tab.active { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏦</div>
+    <div>
+      <h1>Credit Card Default · ML Service</h1>
+      <p>Прогнозирование дефолта по кредитным картам</p>
+    </div>
+  </div>
+  <div id="health-badge" onclick="openHealth()">
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text">Проверка...</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════ MAIN ════════════════════════════ -->
+<main>
+
+  <!-- Stats bar -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-item"><div class="stat-val" id="s-models">—</div><div class="stat-lbl">Загружено моделей</div></div>
+    <div class="stat-item"><div class="stat-val" id="s-v1req">—</div><div class="stat-lbl">Запросов (v1)</div></div>
+    <div class="stat-item"><div class="stat-val" id="s-v2req">—</div><div class="stat-lbl">Запросов (v2)</div></div>
+    <div class="stat-item"><div class="stat-val" id="s-v1dr">—</div><div class="stat-lbl">Default rate v1</div></div>
+    <div class="stat-item"><div class="stat-val" id="s-v2dr">—</div><div class="stat-lbl">Default rate v2</div></div>
+  </div>
+
+  <!-- Endpoint cards -->
+  <div class="section-title">Эндпоинты</div>
+  <div class="cards">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="method get">GET</span>
+        <span class="endpoint">/health</span>
+      </div>
+      <p>Проверка работоспособности сервиса. Возвращает статус и список загруженных моделей.</p>
+      <button class="btn btn-info" onclick="openHealth()">Проверить статус</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="method post">POST</span>
+        <span class="endpoint">/predict</span>
+      </div>
+      <p>Прогноз дефолта через модель <b>v1 (LogisticRegression)</b>. Введите параметры клиента и получите результат.</p>
+      <button class="btn btn-primary" onclick="openPredict('v1')">Открыть форму v1</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="method post">POST</span>
+        <span class="endpoint">/predict/v2</span>
+      </div>
+      <p>Прогноз через модель <b>v2 (GradientBoosting)</b>. Более высокий ROC-AUC (0.778 vs 0.708).</p>
+      <button class="btn btn-primary" onclick="openPredict('v2')">Открыть форму v2</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="method post">POST</span>
+        <span class="endpoint">/ab/predict</span>
+      </div>
+      <p>A/B тестирование — случайный роутинг 50/50 между v1 и v2. Поле <code>ab_group</code> покажет, какая модель ответила.</p>
+      <button class="btn btn-warning" onclick="openAB()">A/B предсказание</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="method get">GET</span>
+        <span class="endpoint">/ab/stats</span>
+      </div>
+      <p>Накопленная статистика A/B-теста: количество запросов, default rate и средняя вероятность по каждой группе.</p>
+      <button class="btn btn-success" onclick="openStats()">Смотреть статистику</button>
+    </div>
+
+  </div>
+
+  <!-- Models info -->
+  <div class="section-title">Модели</div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><span class="method get" style="background:#1a2a3a;color:#64b5f6">v1</span><span class="endpoint">LogisticRegression</span></div>
+      <p>Базовая модель. <b>ROC-AUC: 0.708</b> · F1: 0.461 · class_weight=balanced · max_iter=1000</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="method get" style="background:#1a3a2a;color:#81c784">v2</span><span class="endpoint">GradientBoosting</span></div>
+      <p>Улучшенная модель. <b>ROC-AUC: 0.778</b> · F1: 0.463 · n_estimators=200 · max_depth=4</p>
+    </div>
+  </div>
+
+</main>
+
+<!-- ═══════════════════ MODAL: HEALTH ════════════════════════════ -->
+<div class="overlay" id="overlay-health">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">💚 GET /health</div>
+      <button class="close-btn" onclick="closeAll()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="health-content">
+        <div style="text-align:center;padding:30px;color:var(--muted)"><div class="spinner"></div><p style="margin-top:10px">Запрос...</p></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-info btn-sm" onclick="loadHealth()">Обновить</button>
+      <button class="btn btn-outline btn-sm" onclick="closeAll()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL: PREDICT ═══════════════════════════ -->
+<div class="overlay" id="overlay-predict">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🔮 <span id="predict-title">POST /predict</span></div>
+      <button class="close-btn" onclick="closeAll()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Version tabs (shown only in AB modal, hidden here) -->
+      <div class="hint">
+        <b>Подсказка по полям:</b> PAY_0…PAY_6 — статус оплаты: <b>-2</b> нет потребления, <b>-1</b> оплачено вовремя, <b>1…9</b> просрочка в месяцах.
+        BILL_AMT — сумма счёта (NT$), PAY_AMT — сумма платежа (NT$).
+        <br>Нажмите <b>«Пример»</b> чтобы заполнить форму тестовыми данными.
+      </div>
+
+      <form id="predict-form" onsubmit="return false">
+        <div class="form-grid" id="predict-fields"></div>
+      </form>
+
+      <div class="result-box" id="predict-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="fillExample('predict-fields')">📋 Пример</button>
+      <button class="btn btn-outline btn-sm" onclick="clearForm('predict-fields')">🗑 Очистить</button>
+      <button class="btn btn-primary" id="predict-submit-btn" onclick="submitPredict()">
+        Получить прогноз
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="closeAll()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL: AB PREDICT ════════════════════════ -->
+<div class="overlay" id="overlay-ab">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🎲 POST /ab/predict <span style="font-size:.8rem;color:var(--warning);font-weight:400;margin-left:8px">50/50 роутинг</span></div>
+      <button class="close-btn" onclick="closeAll()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint">
+        <b>A/B тест:</b> каждый запрос случайно направляется к модели v1 или v2.
+        Поле <b>ab_group</b> в ответе покажет, какая модель сработала.
+        Сделайте несколько запросов, чтобы попасть в обе группы.
+      </div>
+      <form id="ab-form" onsubmit="return false">
+        <div class="form-grid" id="ab-fields"></div>
+      </form>
+      <div class="result-box" id="ab-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline btn-sm" onclick="fillExample('ab-fields')">📋 Пример</button>
+      <button class="btn btn-outline btn-sm" onclick="clearForm('ab-fields')">🗑 Очистить</button>
+      <button class="btn btn-warning" onclick="submitAB()">🎲 Отправить A/B запрос</button>
+      <button class="btn btn-outline btn-sm" onclick="closeAll()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MODAL: AB STATS ══════════════════════════ -->
+<div class="overlay" id="overlay-stats">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📊 GET /ab/stats</div>
+      <button class="close-btn" onclick="closeAll()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="stats-content">
+        <div style="text-align:center;padding:30px;color:var(--muted)"><div class="spinner"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-success btn-sm" onclick="loadStats()">Обновить</button>
+      <button class="btn btn-outline btn-sm" onclick="closeAll()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── Feature definitions ───────────────────────────────────────────
+const FEATURES = [
+  { name:'LIMIT_BAL',  ph:'20000',  hint:'Кредитный лимит (NT$)' },
+  { name:'SEX',        ph:'2',      hint:'1=муж, 2=жен' },
+  { name:'EDUCATION',  ph:'2',      hint:'1=аспир, 2=универ, 3=школа, 4=др' },
+  { name:'MARRIAGE',   ph:'1',      hint:'1=женат, 2=холост, 3=др' },
+  { name:'AGE',        ph:'24',     hint:'Возраст (лет)' },
+  { name:'PAY_0',      ph:'2',      hint:'-2 нет, -1 вовремя, 1-9 просрочка мес' },
+  { name:'PAY_2',      ph:'2',      hint:'-2 нет, -1 вовремя, 1-9 просрочка мес' },
+  { name:'PAY_3',      ph:'-1',     hint:'-2 нет, -1 вовремя, 1-9 просрочка мес' },
+  { name:'PAY_4',      ph:'-1',     hint:'-2 нет, -1 вовремя, 1-9 просрочка мес' },
+  { name:'PAY_5',      ph:'-2',     hint:'-2 нет, -1 вовремя, 1-9 просрочка мес' },
+  { name:'PAY_6',      ph:'-2',     hint:'-2 нет, -1 вовремя, 1-9 просрочка мес' },
+  { name:'BILL_AMT1',  ph:'3913',   hint:'Сумма счёта, месяц 1 (NT$)' },
+  { name:'BILL_AMT2',  ph:'3102',   hint:'Сумма счёта, месяц 2 (NT$)' },
+  { name:'BILL_AMT3',  ph:'689',    hint:'Сумма счёта, месяц 3 (NT$)' },
+  { name:'BILL_AMT4',  ph:'0',      hint:'Сумма счёта, месяц 4 (NT$)' },
+  { name:'BILL_AMT5',  ph:'0',      hint:'Сумма счёта, месяц 5 (NT$)' },
+  { name:'BILL_AMT6',  ph:'0',      hint:'Сумма счёта, месяц 6 (NT$)' },
+  { name:'PAY_AMT1',   ph:'0',      hint:'Платёж, месяц 1 (NT$)' },
+  { name:'PAY_AMT2',   ph:'689',    hint:'Платёж, месяц 2 (NT$)' },
+  { name:'PAY_AMT3',   ph:'0',      hint:'Платёж, месяц 3 (NT$)' },
+  { name:'PAY_AMT4',   ph:'0',      hint:'Платёж, месяц 4 (NT$)' },
+  { name:'PAY_AMT5',   ph:'0',      hint:'Платёж, месяц 5 (NT$)' },
+  { name:'PAY_AMT6',   ph:'0',      hint:'Платёж, месяц 6 (NT$)' },
+];
+
+// ── Build form fields ─────────────────────────────────────────────
+function buildForm(containerId) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = '';
+  FEATURES.forEach(f => {
+    c.innerHTML += `
+      <div class="form-group">
+        <label>${f.name} <span>${f.hint}</span></label>
+        <input type="number" step="any" name="${f.name}" placeholder="${f.ph}"
+               oninput="this.classList.toggle('filled', this.value!=='')">
+      </div>`;
+  });
+}
+
+function fillExample(containerId) {
+  document.querySelectorAll(`#${containerId} input`).forEach(inp => {
+    inp.value = inp.placeholder;
+    inp.classList.add('filled');
+  });
+}
+
+function clearForm(containerId) {
+  document.querySelectorAll(`#${containerId} input`).forEach(inp => {
+    inp.value = '';
+    inp.classList.remove('filled');
+  });
+  ['predict-result','ab-result'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.className='result-box'; el.innerHTML=''; }
+  });
+}
+
+function collectForm(containerId) {
+  const data = {};
+  document.querySelectorAll(`#${containerId} input`).forEach(inp => {
+    const v = inp.value.trim();
+    if (v === '') throw new Error(`Заполните поле: ${inp.name}`);
+    data[inp.name] = parseFloat(v);
+  });
+  return data;
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────
+function closeAll() {
+  document.querySelectorAll('.overlay').forEach(o => o.classList.remove('open'));
+}
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) closeAll(); });
+});
+
+// ── Result renderer ───────────────────────────────────────────────
+function showResult(boxId, data, isAB=false) {
+  const box = document.getElementById(boxId);
+  const def = data.prediction === 1;
+  const prob = (data.probability * 100).toFixed(1);
+  const probColor = def ? '#ff4d6d' : '#00d4aa';
+
+  let abBadge = '';
+  if (isAB) {
+    abBadge = `<div class="result-item">
+      <span class="r-lbl">A/B группа</span>
+      <span class="r-val" style="color:var(--warning)">${data.ab_group}</span>
+    </div>`;
+  }
+
+  box.className = `result-box show ${def ? 'bad' : 'ok'}`;
+  box.innerHTML = `
+    <div class="result-verdict">
+      ${def ? '🔴 Дефолт прогнозируется' : '🟢 Дефолт не прогнозируется'}
+    </div>
+    <div class="result-grid">
+      <div class="result-item">
+        <span class="r-lbl">Prediction</span>
+        <span class="r-val">${data.prediction}</span>
+      </div>
+      <div class="result-item">
+        <span class="r-lbl">Вероятность дефолта</span>
+        <span class="r-val" style="color:${probColor}">${prob}%</span>
+      </div>
+      <div class="result-item">
+        <span class="r-lbl">Модель</span>
+        <span class="r-val" style="color:var(--accent)">${data.model_version}</span>
+      </div>
+      ${abBadge}
+    </div>
+    <div class="prob-bar-wrap">
+      <div style="font-size:.72rem;color:var(--muted);margin-bottom:4px">Вероятность дефолта</div>
+      <div class="prob-bar-bg">
+        <div class="prob-bar-fill" id="pbar" style="width:0%;background:${probColor}"></div>
+      </div>
+    </div>`;
+  setTimeout(() => {
+    const bar = document.getElementById('pbar');
+    if (bar) bar.style.width = prob + '%';
+  }, 50);
+}
+
+function showError(boxId, msg) {
+  const box = document.getElementById(boxId);
+  box.className = 'result-box show neutral';
+  box.innerHTML = `<div style="color:var(--danger)">⚠️ ${msg}</div>`;
+}
+
+// ── HEALTH ────────────────────────────────────────────────────────
+function openHealth() {
+  document.getElementById('overlay-health').classList.add('open');
+  loadHealth();
+}
+
+async function loadHealth() {
+  const c = document.getElementById('health-content');
+  c.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    const dot = document.getElementById('status-dot');
+    const txt = document.getElementById('status-text');
+    dot.className = 'dot ok'; txt.textContent = 'Сервис работает';
+    document.getElementById('s-models').textContent = d.models.length;
+    c.innerHTML = `
+      <div class="health-grid">
+        <div class="health-item"><div class="h-lbl">Статус</div><div class="h-val" style="color:var(--success)">✓ ${d.status}</div></div>
+        <div class="health-item"><div class="h-lbl">Модели</div><div class="h-val">${d.models.join(', ')}</div></div>
+        <div class="health-item" style="grid-column:1/-1"><div class="h-lbl">Timestamp</div><div class="h-val" style="font-size:.85rem">${d.timestamp}</div></div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('status-dot').className = 'dot err';
+    document.getElementById('status-text').textContent = 'Недоступен';
+    c.innerHTML = `<div style="color:var(--danger);padding:16px">⚠️ Не удалось подключиться к сервису</div>`;
+  }
+}
+
+// ── PREDICT ───────────────────────────────────────────────────────
+let currentVersion = 'v1';
+
+function openPredict(version) {
+  currentVersion = version;
+  document.getElementById('predict-title').textContent =
+    version === 'v1' ? 'POST /predict  ·  LogisticRegression' : 'POST /predict/v2  ·  GradientBoosting';
+  buildForm('predict-fields');
+  document.getElementById('predict-result').className = 'result-box';
+  document.getElementById('overlay-predict').classList.add('open');
+}
+
+async function submitPredict() {
+  let data;
+  try { data = collectForm('predict-fields'); }
+  catch(e) { showError('predict-result', e.message); return; }
+
+  const btn = document.getElementById('predict-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Запрос...';
+
+  const url = currentVersion === 'v1' ? '/predict' : '/predict/v2';
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || 'Ошибка сервера');
+    showResult('predict-result', res);
+    refreshStatsBar();
+  } catch(e) {
+    showError('predict-result', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Получить прогноз';
+  }
+}
+
+// ── AB PREDICT ────────────────────────────────────────────────────
+function openAB() {
+  buildForm('ab-fields');
+  document.getElementById('ab-result').className = 'result-box';
+  document.getElementById('overlay-ab').classList.add('open');
+}
+
+async function submitAB() {
+  let data;
+  try { data = collectForm('ab-fields'); }
+  catch(e) { showError('ab-result', e.message); return; }
+
+  try {
+    const r = await fetch('/ab/predict', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || 'Ошибка сервера');
+    showResult('ab-result', res, true);
+    refreshStatsBar();
+  } catch(e) {
+    showError('ab-result', e.message);
+  }
+}
+
+// ── AB STATS ──────────────────────────────────────────────────────
+function openStats() {
+  document.getElementById('overlay-stats').classList.add('open');
+  loadStats();
+}
+
+async function loadStats() {
+  const c = document.getElementById('stats-content');
+  c.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>';
+  try {
+    const r = await fetch('/ab/stats');
+    const d = await r.json();
+    const stats = d.ab_stats;
+
+    let rows = '';
+    for (const [v, s] of Object.entries(stats)) {
+      const dr = s.default_rate !== null ? (s.default_rate * 100).toFixed(1) + '%' : '—';
+      const ap = s.avg_probability !== null ? (s.avg_probability * 100).toFixed(1) + '%' : '—';
+      const barW = s.default_rate !== null ? Math.round(s.default_rate * 100) : 0;
+      rows += `<tr>
+        <td>${v}</td>
+        <td>${s.requests}</td>
+        <td><div class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${barW}%"></div></div>${dr}</div></td>
+        <td>${ap}</td>
+      </tr>`;
+    }
+
+    c.innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px">
+        Обновлено: ${new Date(d.timestamp).toLocaleTimeString('ru')}
+      </div>
+      <table class="ab-table">
+        <thead><tr><th>Версия</th><th>Запросов</th><th>Default rate</th><th>Avg probability</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="margin-top:16px;font-size:.78rem;color:var(--muted)">
+        Статистика накапливается в памяти сервиса. Для A/B-теста используйте <b>/ab/predict</b>.
+      </div>`;
+
+    // update top bar
+    const v1 = stats.v1 || {}; const v2 = stats.v2 || {};
+    document.getElementById('s-v1req').textContent = v1.requests ?? '—';
+    document.getElementById('s-v2req').textContent = v2.requests ?? '—';
+    document.getElementById('s-v1dr').textContent  = v1.default_rate != null ? (v1.default_rate*100).toFixed(1)+'%' : '—';
+    document.getElementById('s-v2dr').textContent  = v2.default_rate != null ? (v2.default_rate*100).toFixed(1)+'%' : '—';
+  } catch(e) {
+    c.innerHTML = `<div style="color:var(--danger)">⚠️ ${e.message}</div>`;
+  }
+}
+
+async function refreshStatsBar() {
+  try {
+    const r = await fetch('/ab/stats');
+    const d = await r.json();
+    const v1 = d.ab_stats.v1 || {}; const v2 = d.ab_stats.v2 || {};
+    document.getElementById('s-v1req').textContent = v1.requests ?? '—';
+    document.getElementById('s-v2req').textContent = v2.requests ?? '—';
+    document.getElementById('s-v1dr').textContent  = v1.default_rate != null ? (v1.default_rate*100).toFixed(1)+'%' : '—';
+    document.getElementById('s-v2dr').textContent  = v2.default_rate != null ? (v2.default_rate*100).toFixed(1)+'%' : '—';
+  } catch(_) {}
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    document.getElementById('status-dot').className  = 'dot ok';
+    document.getElementById('status-text').textContent = 'Сервис работает';
+    document.getElementById('s-models').textContent    = d.models.length;
+  } catch(_) {
+    document.getElementById('status-dot').className  = 'dot err';
+    document.getElementById('status-text').textContent = 'Недоступен';
+  }
+  refreshStatsBar();
+})();
+
+// Keyboard close
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+</script>
+</body>
+</html>
